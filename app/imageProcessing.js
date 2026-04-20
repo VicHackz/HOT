@@ -249,6 +249,18 @@ async function stageWithGemini(productImageInput) {
   return `data:${imgPart.inlineData.mimeType};base64,${imgPart.inlineData.data}`
 }
 
+// ── Komprimera bild för localStorage (max 900px, 0.75 kvalitet) ──────────────
+export async function compressForStorage(dataUrl, maxSize = 900, quality = 0.75) {
+  const img = await loadImage(dataUrl)
+  const scale = Math.min(1, maxSize / Math.max(img.naturalWidth, img.naturalHeight))
+  const w = Math.round(img.naturalWidth * scale)
+  const h = Math.round(img.naturalHeight * scale)
+  const canvas = document.createElement('canvas')
+  canvas.width = w; canvas.height = h
+  canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+  return canvas.toDataURL('image/jpeg', quality)
+}
+
 // ── Exporterad: stageInRoom ───────────────────────────────────────────────────
 export async function stageInRoom(productImage, roomType, style) {
   if (roomType === 'jakobsdal') {

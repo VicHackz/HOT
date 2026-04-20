@@ -2,7 +2,7 @@ import React from 'react'
 import { useApp } from '../state.jsx'
 import { Btn, Field, Input, Textarea, Select, Status, Pipeline } from '../components.jsx'
 import { AppShell } from './Supplier.jsx'
-import { sharpenImage, stageInRoom, getGeminiKey, setGeminiKey } from '../imageProcessing.js'
+import { sharpenImage, stageInRoom, getGeminiKey, setGeminiKey, compressForStorage } from '../imageProcessing.js'
 
 // ── Admin page ────────────────────────────────────────────────────────────────
 export function AdminPage() {
@@ -266,7 +266,8 @@ export function DetailPage() {
       const result = await stageInRoom(p.image, roomType, roomStyle)
       setStagedImage(result)
       setImageView('staged')
-      updateProduct(p.id, { stagedImage: result })
+      const compressed = await compressForStorage(result)
+      updateProduct(p.id, { stagedImage: compressed })
       notify('Room image generated!', 'success')
     } catch (err) {
       notify(err.message || 'Room staging failed', 'error')
