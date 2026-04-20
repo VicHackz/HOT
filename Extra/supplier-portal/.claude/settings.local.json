@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l /c/Users/victo/Exam/supplier-portal/src/**/*.tsx /c/Users/victo/Exam/supplier-portal/src/**/*.ts)",
+      "Bash(curl -v --max-time 15 \"https://image.pollinations.ai/prompt/test+sofa+room\" -o /dev/null)",
+      "Bash(curl -v --max-time 15 \"https://image.pollinations.ai/prompt/a+beige+linen+sofa+in+a+modern+Scandinavian+living+room?width=512&height=512&model=flux\" -o /dev/null)",
+      "Bash(curl -sv --max-time 20 \"https://image.pollinations.ai/prompt/a+beige+linen+sofa+in+a+modern+Scandinavian+living+room?width=512&height=512&model=flux\" -o /tmp/pollinations_test.jpg)",
+      "WebFetch(domain:pollinations.ai)",
+      "WebFetch(domain:image.pollinations.ai)",
+      "Bash(curl *)",
+      "WebFetch(domain:github.com)",
+      "Bash(echo \"Exit code: $?\")",
+      "Read(//tmp/**)",
+      "Bash(grep -E \"< HTTP|< Access-Control|< Content-Type|< x-|authorization\" echo \"File size: $\\(wc -c < /tmp/hf_test.jpg || echo 'none'\\)\")",
+      "WebFetch(domain:stability.ai)",
+      "Bash(grep -Ei \"< HTTP|< access-control|< content-type|< x-\" echo \"File size: $\\(wc -c < /tmp/hf_sdxl.jpg \\)\")",
+      "WebFetch(domain:platform.stability.ai)",
+      "Bash(grep -Ei \"< HTTP|< access-control|< content-type\" echo \"File size: $\\(wc -c < /tmp/hf_sd21.jpg \\)\" echo \"---Content start:\" head -c 100 /tmp/hf_sd21.jpg)",
+      "Bash(grep -Ei \"< HTTP|< access-control|< content-type|< x-error\" echo \"---\" echo \"File size: $\\(wc -c < /tmp/hf_flux.bin \\)\" head -c 200 /tmp/hf_flux.bin)",
+      "Bash(grep -Ei \"< HTTP|< access-control|< content-type|< x-error\" echo \"File size: $\\(wc -c < /tmp/hf_router.bin \\)\" head -c 200 /tmp/hf_router.bin)",
+      "WebFetch(domain:deepai.org)",
+      "WebFetch(domain:replicate.com)",
+      "WebFetch(domain:fal.ai)",
+      "WebFetch(domain:getimg.ai)",
+      "WebFetch(domain:prodia.com)",
+      "WebFetch(domain:docs.prodia.com)",
+      "WebFetch(domain:docs.segmind.com)",
+      "WebFetch(domain:fireworks.ai)",
+      "Bash(python3 -c ' *)",
+      "Bash(grep -Ei \"^< \\(HTTP|content-type|x-auth|x-model\\)\" echo \"File size: $\\(wc -c < /tmp/poll_nologo.jpg || echo 'failed'\\)\")"
+    ]
+  }
+}

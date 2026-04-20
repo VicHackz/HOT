@@ -1,38 +1,38 @@
-/* global React, useApp, Btn, Field, Input, Textarea, Select, Status, Pipeline, Swatch, hashHue */
-const { useState: useSP, useMemo: useMP } = React;
+import React from 'react'
+import { useApp } from '../state.jsx'
+import { Btn, Field, Input, Textarea, Select, Status, Pipeline } from '../components.jsx'
 
-// ────────── AppShell: sidebar + top bar layout used by all logged-in pages ──────────
-function AppShell({ nav, children, crumbs, actions }) {
-  const { user, logout, setRoute } = useApp();
-  const label = user?.role === 'admin' ? 'HoT Admin' : user?.supplier?.name || 'Supplier';
-  const initial = user?.role === 'admin' ? 'H' : (user?.supplier?.name?.[0] || 'S');
+export function AppShell({ nav, children, crumbs, actions }) {
+  const { user, logout } = useApp()
+  const label = user?.role === 'admin' ? 'HoT Admin' : user?.supplier?.name || 'Supplier'
+  const initial = user?.role === 'admin' ? 'H' : (user?.supplier?.name?.[0] || 'S')
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brandmark">
-          <span className="logo">HoT<span className="dot"/></span>
+          <span className="logo">HoT<span className="dot" /></span>
           <span className="mono">PORTAL</span>
         </div>
         {nav}
         <div className="bottom">
           <div className="user-card">
             <div className="avatar">{initial}</div>
-            <div style={{minWidth:0, flex:1}}>
-              <div className="name" style={{whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{label}</div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div className="name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
               <div className="role">{user?.role}</div>
             </div>
-            <button className="btn ghost sm" onClick={logout} title="Log out" style={{padding:'6px 8px'}}>↗</button>
+            <button className="btn ghost sm" onClick={logout} title="Log out" style={{ padding: '6px 8px' }}>↗</button>
           </div>
         </div>
       </aside>
       <main className="main">
         <div className="topbar">
           <div className="crumbs">
-            <span style={{fontFamily:'var(--mono)', fontSize:10.5, letterSpacing:'.18em'}}>PORTAL</span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.18em' }}>PORTAL</span>
             {crumbs?.map((c, i) => (
               <React.Fragment key={i}>
                 <span className="sep">/</span>
-                <span className={i === crumbs.length-1 ? 'here' : ''}>{c}</span>
+                <span className={i === crumbs.length - 1 ? 'here' : ''}>{c}</span>
               </React.Fragment>
             ))}
           </div>
@@ -41,165 +41,197 @@ function AppShell({ nav, children, crumbs, actions }) {
         <div className="page">{children}</div>
       </main>
     </div>
-  );
+  )
 }
 
-// ────────── Supplier page (upload + history) ──────────
-function SupplierPage() {
-  const { user, products, addProduct, notify } = useApp();
-  const [tab, setTab] = useSP('upload');
+export function SupplierPage() {
+  const { user, products, addProduct, notify } = useApp()
+  const [tab, setTab] = React.useState('upload')
   const mine = products.filter(p => p.supplierId === user.supplier.id)
-                       .sort((a,b) => +new Date(b.uploadDate) - +new Date(a.uploadDate));
+                       .sort((a, b) => +new Date(b.uploadDate) - +new Date(a.uploadDate))
+
+  const allComments = mine.flatMap(p =>
+    (p.comments || []).map(c => ({ ...c, productName: p.productName, productId: p.id }))
+  ).sort((a, b) => new Date(b.date) - new Date(a.date))
 
   const nav = (
     <nav className="nav">
       <div className="group">Workspace</div>
-      <button className={tab==='upload'?'active':''} onClick={()=>setTab('upload')}>
+      <button className={tab === 'upload' ? 'active' : ''} onClick={() => setTab('upload')}>
         <span>Upload product</span>
       </button>
-      <button className={tab==='history'?'active':''} onClick={()=>setTab('history')}>
+      <button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>
         <span>Upload history</span>
         <span className="count">{mine.length}</span>
       </button>
       <div className="group">Account</div>
-      <button><span>Supplier profile</span></button>
-      <button><span>Review comments</span><span className="count">3</span></button>
+      <button className={tab === 'profile' ? 'active' : ''} onClick={() => setTab('profile')}>
+        <span>Supplier profile</span>
+      </button>
+      <button className={tab === 'comments' ? 'active' : ''} onClick={() => setTab('comments')}>
+        <span>Review comments</span>
+        <span className="count">{allComments.length}</span>
+      </button>
     </nav>
-  );
+  )
 
   const stats = {
     total: mine.length,
-    pending: mine.filter(p=>p.status==='Pending Review').length,
-    approved: mine.filter(p=>p.status==='Approved').length,
-  };
+    pending: mine.filter(p => p.status === 'Pending Review').length,
+    approved: mine.filter(p => p.status === 'Approved').length,
+  }
+
+  const crumbLabel = { upload: 'Upload', history: 'History', profile: 'Profile', comments: 'Comments' }
 
   return (
     <AppShell nav={nav}
-      crumbs={[user.supplier.name, tab==='upload'?'Upload':'History']}
+      crumbs={[user.supplier.name, crumbLabel[tab] || tab]}
       actions={<>
         <span className="meta">{user.supplier.city}, {user.supplier.country}</span>
         <Btn variant="ghost" size="sm">Docs ↗</Btn>
       </>}
     >
-      {/* Page header */}
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:34}}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 34 }}>
         <div>
           <div className="eyebrow">Supplier workspace</div>
-          <h1 className="h1" style={{marginTop:8}}>Good morning, <em style={{fontStyle:'italic', color:'var(--accent-ink)'}}>{user.supplier.name.split(' ')[0]}</em>.</h1>
-          <p style={{color:'var(--ink-3)', maxWidth:520, marginTop:8, fontSize:13.5}}>
+          <h1 className="h1" style={{ marginTop: 8 }}>Good morning, <em style={{ fontStyle: 'italic', color: 'var(--accent-ink)' }}>{user.supplier.name.split(' ')[0]}</em>.</h1>
+          <p style={{ color: 'var(--ink-3)', maxWidth: 520, marginTop: 8, fontSize: 13.5 }}>
             {stats.pending > 0
-              ? `You have ${stats.pending} product${stats.pending>1?'s':''} awaiting review by the HoT team.`
+              ? `You have ${stats.pending} product${stats.pending > 1 ? 's' : ''} awaiting review by the HoT team.`
               : 'All your recent uploads have been reviewed.'}
           </p>
         </div>
-        <div style={{display:'flex', gap:34}}>
-          <Stat label="Total" value={stats.total}/>
-          <Stat label="Pending" value={stats.pending} tone="ochre"/>
-          <Stat label="Approved" value={stats.approved} tone="sage"/>
+        <div style={{ display: 'flex', gap: 34 }}>
+          <Stat label="Total" value={stats.total} />
+          <Stat label="Pending" value={stats.pending} tone="ochre" />
+          <Stat label="Approved" value={stats.approved} tone="sage" />
         </div>
       </div>
 
-      {tab === 'upload' ? <UploadForm onSubmit={p => { addProduct(p); notify('Product uploaded — now in review','success'); setTab('history'); }}/>
-                        : <HistoryList products={mine}/>}
+      {tab === 'upload' && (
+        <UploadForm onSubmit={p => { addProduct(p); notify('Product uploaded — now in review', 'success'); setTab('history') }} />
+      )}
+      {tab === 'history' && <HistoryList products={mine} />}
+      {tab === 'profile' && <ProfileTab supplier={user.supplier} />}
+      {tab === 'comments' && <CommentsTab comments={allComments} />}
     </AppShell>
-  );
+  )
 }
 
 function Stat({ label, value, tone }) {
-  const col = tone==='ochre' ? 'var(--ochre)' : tone==='sage' ? 'var(--sage)' : 'var(--ink)';
+  const col = tone === 'ochre' ? 'var(--ochre)' : tone === 'sage' ? 'var(--sage)' : 'var(--ink)'
   return (
-    <div style={{textAlign:'right'}}>
-      <div style={{fontFamily:'var(--serif)', fontSize:34, lineHeight:1, color: col}}>{String(value).padStart(2,'0')}</div>
-      <div className="eyebrow" style={{marginTop:6}}>{label}</div>
+    <div style={{ textAlign: 'right' }}>
+      <div style={{ fontFamily: 'var(--serif)', fontSize: 34, lineHeight: 1, color: col }}>{String(value).padStart(2, '0')}</div>
+      <div className="eyebrow" style={{ marginTop: 6 }}>{label}</div>
     </div>
-  );
+  )
 }
 
-// ────────── Upload form ──────────
-function UploadForm({ onSubmit }) {
-  const { user, notify } = useApp();
-  const [data, setData] = useSP({
-    productName:'', category:'Sofa', color:'', material:'', weight:'', weightUnit:'kg',
-    width:'', height:'', depth:'', collectionName:'', season:'', description:'',
-  });
-  const [errors, setErrors] = useSP({});
-  const [preview, setPreview] = useSP(null);
+const DRAFT_KEY = 'hot-upload-draft'
 
-  const set = (k,v) => { setData(d => ({...d,[k]:v})); setErrors(e => ({...e,[k]:''})); };
+function UploadForm({ onSubmit }) {
+  const { user, notify } = useApp()
+  const [data, setData] = React.useState(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY)
+      return saved ? JSON.parse(saved) : {
+        productName: '', category: 'Sofa', color: '', material: '', weight: '', weightUnit: 'kg',
+        width: '', height: '', depth: '', collectionName: '', season: '', description: '',
+      }
+    } catch {
+      return {
+        productName: '', category: 'Sofa', color: '', material: '', weight: '', weightUnit: 'kg',
+        width: '', height: '', depth: '', collectionName: '', season: '', description: '',
+      }
+    }
+  })
+  const [errors, setErrors] = React.useState({})
+  const [preview, setPreview] = React.useState(null)
+
+  const set = (k, v) => { setData(d => ({ ...d, [k]: v })); setErrors(e => ({ ...e, [k]: '' })) }
 
   const handleImage = (e) => {
-    const f = e.target.files?.[0]; if (!f) return;
-    const r = new FileReader();
-    r.onload = () => setPreview(r.result);
-    r.readAsDataURL(f);
-  };
+    const f = e.target.files?.[0]; if (!f) return
+    const r = new FileReader()
+    r.onload = () => setPreview(r.result)
+    r.readAsDataURL(f)
+  }
+
+  const saveDraft = () => {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(data))
+    notify('Draft saved', 'success')
+  }
 
   const submit = (e) => {
-    e.preventDefault();
-    const er = {};
-    if (!data.productName.trim()) er.productName = 'Required';
-    if (!data.color.trim()) er.color = 'Required';
-    if (!data.material.trim()) er.material = 'Required';
-    if (!data.weight || +data.weight <= 0) er.weight = 'Required';
-    if (!data.width || +data.width <= 0) er.width = 'Required';
-    if (!data.collectionName.trim()) er.collectionName = 'Required';
-    if (!data.season.trim()) er.season = 'Required';
-    setErrors(er);
-    if (Object.keys(er).length) { notify('Please fill required fields', 'error'); return; }
+    e.preventDefault()
+    const er = {}
+    if (!data.productName.trim()) er.productName = 'Required'
+    if (!data.color.trim()) er.color = 'Required'
+    if (!data.material.trim()) er.material = 'Required'
+    if (!data.weight || +data.weight <= 0) er.weight = 'Required'
+    if (!data.width || +data.width <= 0) er.width = 'Required'
+    if (!data.collectionName.trim()) er.collectionName = 'Required'
+    if (!data.season.trim()) er.season = 'Required'
+    setErrors(er)
+    if (Object.keys(er).length) { notify('Please fill required fields', 'error'); return }
 
+    localStorage.removeItem(DRAFT_KEY)
+    const id = 'prod-' + Date.now()
     onSubmit({
-      id: 'prod-'+Date.now(),
+      id,
       supplierId: user.supplier.id, supplierName: user.supplier.name,
+      image: preview || `https://picsum.photos/seed/${id}/400/300`,
       productName: data.productName, category: data.category, color: data.color, material: data.material,
       weight: +data.weight, weightUnit: data.weightUnit,
-      dimensions: { width:+data.width, height:+data.height||0, depth:+data.depth||0 },
+      dimensions: { width: +data.width, height: +data.height || 0, depth: +data.depth || 0 },
       collectionName: data.collectionName, season: data.season, description: data.description,
       status: 'Pending Review', uploadDate: new Date().toISOString(),
-      imageSeed: 'prod-'+Date.now(),
-    });
-  };
+      comments: [],
+    })
+  }
 
   return (
-    <form onSubmit={submit} className="card" style={{padding:0, overflow:'hidden', background:'transparent', border:'1px solid var(--rule)'}}>
-      <div style={{display:'grid', gridTemplateColumns:'380px 1fr', minHeight:480}}>
+    <form onSubmit={submit} className="card" style={{ padding: 0, overflow: 'hidden', background: 'transparent', border: '1px solid var(--rule)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', minHeight: 480 }}>
         {/* Image side */}
-        <div style={{padding:28, borderRight:'1px solid var(--rule)', background:'var(--paper)'}}>
-          <div className="eyebrow" style={{marginBottom:12}}>Product image</div>
-          <label style={{display:'block', cursor:'pointer'}}>
-            <input type="file" accept="image/*" onChange={handleImage} style={{display:'none'}}/>
+        <div style={{ padding: 28, borderRight: '1px solid var(--rule)', background: 'var(--paper)' }}>
+          <div className="eyebrow" style={{ marginBottom: 12 }}>Product image</div>
+          <label style={{ display: 'block', cursor: 'pointer' }}>
+            <input type="file" accept="image/*" onChange={handleImage} style={{ display: 'none' }} />
             {preview ? (
-              <div style={{position:'relative', borderRadius:4, overflow:'hidden'}}>
-                <img src={preview} alt="" style={{width:'100%', display:'block'}}/>
-                <div style={{position:'absolute', top:10, right:10, display:'flex', gap:6}}>
-                  <button type="button" className="btn subtle sm" onClick={(e)=>{e.preventDefault(); setPreview(null);}}>Replace</button>
+              <div style={{ position: 'relative', borderRadius: 4, overflow: 'hidden' }}>
+                <img src={preview} alt="" style={{ width: '100%', display: 'block' }} />
+                <div style={{ position: 'absolute', top: 10, right: 10 }}>
+                  <button type="button" className="btn subtle sm" onClick={(e) => { e.preventDefault(); setPreview(null) }}>Replace</button>
                 </div>
               </div>
             ) : (
               <div style={{
-                border:'1.5px dashed var(--rule)', borderRadius:4,
-                padding:'60px 20px', textAlign:'center',
-                background:'repeating-linear-gradient(135deg, oklch(95% 0.012 80) 0 8px, oklch(93% 0.014 80) 8px 16px)',
+                border: '1.5px dashed var(--rule)', borderRadius: 4,
+                padding: '60px 20px', textAlign: 'center',
+                background: 'repeating-linear-gradient(135deg, oklch(95% 0.012 80) 0 8px, oklch(93% 0.014 80) 8px 16px)',
               }}>
-                <div style={{fontFamily:'var(--serif)', fontSize:28, color:'var(--ink-2)'}}>⟵ Drop image ⟶</div>
-                <div className="meta" style={{marginTop:8}}>OR CLICK TO BROWSE · PNG · JPG · UP TO 10MB</div>
-                <div style={{marginTop:22, display:'flex', justifyContent:'center'}}>
+                <div style={{ fontFamily: 'var(--serif)', fontSize: 28, color: 'var(--ink-2)' }}>⟵ Drop image ⟶</div>
+                <div className="meta" style={{ marginTop: 8 }}>OR CLICK TO BROWSE · PNG · JPG · UP TO 10MB</div>
+                <div style={{ marginTop: 22, display: 'flex', justifyContent: 'center' }}>
                   <span className="btn subtle sm">Choose file</span>
                 </div>
               </div>
             )}
           </label>
 
-          <div className="mt-lg" style={{padding:'14px 0', borderTop:'1px solid var(--rule)'}}>
-            <div className="eyebrow" style={{marginBottom:10}}>What happens next</div>
-            <ol style={{listStyle:'none', padding:0, margin:0, display:'flex', flexDirection:'column', gap:10}}>
+          <div className="mt-lg" style={{ padding: '14px 0', borderTop: '1px solid var(--rule)' }}>
+            <div className="eyebrow" style={{ marginBottom: 10 }}>What happens next</div>
+            <ol style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
-                ['01','Your upload is saved and timestamped.'],
-                ['02','Automated check: image quality, metadata completeness.'],
-                ['03','HoT curator reviews and approves.'],
-                ['04','Product visible in the Jakobsdal catalog.'],
-              ].map(([n,t]) => (
-                <li key={n} style={{display:'flex', gap:12, fontSize:12.5, color:'var(--ink-2)'}}>
-                  <span className="meta" style={{color:'var(--accent-ink)'}}>{n}</span>
+                ['01', 'Your upload is saved and timestamped.'],
+                ['02', 'Automated check: image quality, metadata completeness.'],
+                ['03', 'HoT curator reviews and approves.'],
+                ['04', 'Product visible in the Jakobsdal catalog.'],
+              ].map(([n, t]) => (
+                <li key={n} style={{ display: 'flex', gap: 12, fontSize: 12.5, color: 'var(--ink-2)' }}>
+                  <span className="meta" style={{ color: 'var(--accent-ink)' }}>{n}</span>
                   <span>{t}</span>
                 </li>
               ))}
@@ -208,113 +240,164 @@ function UploadForm({ onSubmit }) {
         </div>
 
         {/* Fields side */}
-        <div style={{padding:32}}>
-          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:20}}>
-            <div style={{gridColumn:'span 2'}}>
+        <div style={{ padding: 32 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+            <div style={{ gridColumn: 'span 2' }}>
               <Field label="Product name" required error={errors.productName}>
-                <Input placeholder="e.g. Stockholm Linen Sofa" value={data.productName} onChange={e=>set('productName',e.target.value)}/>
+                <Input placeholder="e.g. Stockholm Linen Sofa" value={data.productName} onChange={e => set('productName', e.target.value)} />
               </Field>
             </div>
-
             <Field label="Category" required>
-              <Select value={data.category} onChange={e=>set('category',e.target.value)}>
-                {['Sofa','Chair','Table','Fabric','Other'].map(c=><option key={c} value={c}>{c}</option>)}
+              <Select value={data.category} onChange={e => set('category', e.target.value)}>
+                {['Sofa', 'Chair', 'Table', 'Fabric', 'Other'].map(c => <option key={c} value={c}>{c}</option>)}
               </Select>
             </Field>
             <Field label="Collection" required error={errors.collectionName}>
-              <Input placeholder="e.g. Nordic Essentials" value={data.collectionName} onChange={e=>set('collectionName',e.target.value)}/>
+              <Input placeholder="e.g. Nordic Essentials" value={data.collectionName} onChange={e => set('collectionName', e.target.value)} />
             </Field>
-
             <Field label="Color" required error={errors.color}>
-              <Input placeholder="e.g. Natural Beige" value={data.color} onChange={e=>set('color',e.target.value)}/>
+              <Input placeholder="e.g. Natural Beige" value={data.color} onChange={e => set('color', e.target.value)} />
             </Field>
             <Field label="Material" required error={errors.material}>
-              <Input placeholder="e.g. Linen, Velvet" value={data.material} onChange={e=>set('material',e.target.value)}/>
+              <Input placeholder="e.g. Linen, Velvet" value={data.material} onChange={e => set('material', e.target.value)} />
             </Field>
-
             <Field label="Weight" required error={errors.weight}>
-              <div style={{display:'grid', gridTemplateColumns:'1fr 70px', gap:6}}>
-                <Input type="number" step="0.01" placeholder="0.00" value={data.weight} onChange={e=>set('weight',e.target.value)}/>
-                <Select value={data.weightUnit} onChange={e=>set('weightUnit',e.target.value)}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 70px', gap: 6 }}>
+                <Input type="number" step="0.01" placeholder="0.00" value={data.weight} onChange={e => set('weight', e.target.value)} />
+                <Select value={data.weightUnit} onChange={e => set('weightUnit', e.target.value)}>
                   <option value="kg">kg</option><option value="g">g</option>
                 </Select>
               </div>
             </Field>
             <Field label="Season / Year" required error={errors.season}>
-              <Input placeholder="e.g. SS 2024" value={data.season} onChange={e=>set('season',e.target.value)}/>
+              <Input placeholder="e.g. SS 2024" value={data.season} onChange={e => set('season', e.target.value)} />
             </Field>
-
             <Field label="Width (cm)" required error={errors.width}>
-              <Input type="number" placeholder="0" value={data.width} onChange={e=>set('width',e.target.value)}/>
+              <Input type="number" placeholder="0" value={data.width} onChange={e => set('width', e.target.value)} />
             </Field>
             <Field label="Height (cm)">
-              <Input type="number" placeholder="0" value={data.height} onChange={e=>set('height',e.target.value)}/>
+              <Input type="number" placeholder="0" value={data.height} onChange={e => set('height', e.target.value)} />
             </Field>
             <Field label="Depth (cm)">
-              <Input type="number" placeholder="0" value={data.depth} onChange={e=>set('depth',e.target.value)}/>
+              <Input type="number" placeholder="0" value={data.depth} onChange={e => set('depth', e.target.value)} />
             </Field>
-            <div/>
-
-            <div style={{gridColumn:'span 2'}}>
+            <div />
+            <div style={{ gridColumn: 'span 2' }}>
               <Field label="Description" hint="Short copy for HoT curators — materials, story, details.">
-                <Textarea rows={4} placeholder="Describe the product…" value={data.description} onChange={e=>set('description',e.target.value)}/>
+                <Textarea rows={4} placeholder="Describe the product…" value={data.description} onChange={e => set('description', e.target.value)} />
               </Field>
             </div>
           </div>
 
-          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:28, paddingTop:20, borderTop:'1px solid var(--rule)'}}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 28, paddingTop: 20, borderTop: '1px solid var(--rule)' }}>
             <div className="meta">Saves as: Pending Review</div>
-            <div style={{display:'flex', gap:10}}>
-              <Btn variant="ghost" size="md" type="button">Save draft</Btn>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <Btn variant="ghost" size="md" type="button" onClick={saveDraft}>Save draft</Btn>
               <Btn variant="primary" size="md" type="submit">Submit for review →</Btn>
             </div>
           </div>
         </div>
       </div>
     </form>
-  );
+  )
 }
 
-// ────────── History list ──────────
 function HistoryList({ products }) {
   if (!products.length) {
     return (
-      <div className="card" style={{padding:60, textAlign:'center'}}>
-        <div className="h2" style={{color:'var(--ink-2)'}}>No uploads yet</div>
-        <div className="meta" style={{marginTop:10}}>HEAD OVER TO THE UPLOAD TAB TO BEGIN</div>
+      <div className="card" style={{ padding: 60, textAlign: 'center' }}>
+        <div className="h2" style={{ color: 'var(--ink-2)' }}>No uploads yet</div>
+        <div className="meta" style={{ marginTop: 10 }}>HEAD OVER TO THE UPLOAD TAB TO BEGIN</div>
       </div>
-    );
+    )
   }
   return (
-    <div className="card" style={{padding:0, overflow:'hidden'}}>
-      <div style={{display:'grid', gridTemplateColumns:'60px 2fr 1fr 1fr 1.4fr 1.4fr', gap:0, padding:'14px 22px', borderBottom:'1px solid var(--rule)'}}>
-        {['','Product','Category','Color','Pipeline','Uploaded'].map((h,i) => (
+    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '60px 2fr 1fr 1fr 1.4fr 1.4fr', gap: 0, padding: '14px 22px', borderBottom: '1px solid var(--rule)' }}>
+        {['', 'Product', 'Category', 'Color', 'Pipeline', 'Uploaded'].map((h, i) => (
           <div key={i} className="eyebrow">{h}</div>
         ))}
       </div>
       {products.map(p => (
         <div key={p.id} style={{
-          display:'grid', gridTemplateColumns:'60px 2fr 1fr 1fr 1.4fr 1.4fr', gap:0,
-          padding:'16px 22px', borderBottom:'1px solid var(--rule)', alignItems:'center',
-          cursor:'pointer', transition:'background .12s',
+          display: 'grid', gridTemplateColumns: '60px 2fr 1fr 1fr 1.4fr 1.4fr', gap: 0,
+          padding: '16px 22px', borderBottom: '1px solid var(--rule)', alignItems: 'center',
+          cursor: 'pointer', transition: 'background .12s',
         }}
-        onMouseEnter={e=>e.currentTarget.style.background='var(--paper-2)'}
-        onMouseLeave={e=>e.currentTarget.style.background=''}>
-          <div style={{width:40, height:40, borderRadius:4, overflow:'hidden'}}>
-            <Swatch seed={p.imageSeed} label="" h={40}/>
+          onMouseEnter={e => e.currentTarget.style.background = 'var(--paper-2)'}
+          onMouseLeave={e => e.currentTarget.style.background = ''}>
+          <div style={{ width: 40, height: 40, borderRadius: 4, overflow: 'hidden' }}>
+            <img src={p.image} alt={p.productName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
           <div>
-            <div style={{fontSize:13.5, fontWeight:500}}>{p.productName}</div>
-            <div className="meta" style={{marginTop:2}}>{p.collectionName} · {p.season}</div>
+            <div style={{ fontSize: 13.5, fontWeight: 500 }}>{p.productName}</div>
+            <div className="meta" style={{ marginTop: 2 }}>{p.collectionName} · {p.season}</div>
           </div>
-          <div style={{fontSize:13, color:'var(--ink-2)'}}>{p.category}</div>
-          <div style={{fontSize:13, color:'var(--ink-2)'}}>{p.color}</div>
-          <Pipeline status={p.status}/>
-          <div className="meta">{new Date(p.uploadDate).toLocaleDateString('sv-SE')}</div>
+          <div style={{ fontSize: 13, color: 'var(--ink-2)' }}>{p.category}</div>
+          <div style={{ fontSize: 13, color: 'var(--ink-2)' }}>{p.color}</div>
+          <Pipeline status={p.status} />
+          <div className="meta">{new Date(p.uploadDate).toLocaleDateString('en-GB')}</div>
         </div>
       ))}
     </div>
-  );
+  )
 }
 
-Object.assign(window, { SupplierPage, AppShell, Stat });
+function ProfileTab({ supplier }) {
+  return (
+    <div className="card" style={{ padding: 40, maxWidth: 560 }}>
+      <div className="eyebrow" style={{ marginBottom: 20 }}>Supplier profile</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+        {[
+          ['Supplier name', supplier.name],
+          ['Supplier ID', supplier.id],
+          ['City', supplier.city],
+          ['Country', supplier.country],
+        ].map(([label, value]) => (
+          <div key={label}>
+            <div className="eyebrow" style={{ marginBottom: 6 }}>{label}</div>
+            <div style={{ fontSize: 15, color: 'var(--ink)', fontWeight: 500 }}>{value}</div>
+          </div>
+        ))}
+      </div>
+      <div className="meta" style={{ marginTop: 32, textTransform: 'none', letterSpacing: 0, lineHeight: 1.6 }}>
+        To update your supplier information, contact the HoT administrator team.
+      </div>
+    </div>
+  )
+}
+
+function CommentsTab({ comments }) {
+  if (!comments.length) {
+    return (
+      <div className="card" style={{ padding: 60, textAlign: 'center' }}>
+        <div className="h2" style={{ color: 'var(--ink-2)' }}>No comments yet</div>
+        <div className="meta" style={{ marginTop: 10 }}>COMMENTS FROM THE HOT TEAM WILL APPEAR HERE</div>
+      </div>
+    )
+  }
+  return (
+    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--rule)' }}>
+        <div className="eyebrow">All comments — {comments.length} total</div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {comments.map(c => (
+          <div key={c.id} style={{ display: 'flex', gap: 16, padding: '18px 24px', borderBottom: '1px solid var(--rule)', alignItems: 'flex-start' }}>
+            <div style={{ width: 34, height: 34, borderRadius: '50%', background: c.role === 'admin' ? 'var(--ink)' : 'var(--accent)', color: 'var(--paper)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
+              {c.author[0]}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'baseline', marginBottom: 4, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 13, fontWeight: 500 }}>{c.author}</span>
+                <span className="meta">on <strong style={{ fontWeight: 500 }}>{c.productName}</strong></span>
+                <span className="meta" style={{ marginLeft: 'auto' }}>{new Date(c.date).toLocaleDateString('en-GB')}</span>
+              </div>
+              <div style={{ fontSize: 13.5, lineHeight: 1.55, color: 'var(--ink-2)' }}>{c.text}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}

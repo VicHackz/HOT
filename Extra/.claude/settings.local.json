@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k:v for k,v in d.items\\(\\) if k!='candidates'}, indent=2\\)\\); c=d.get\\('candidates',[{}]\\)[0]; p=c.get\\('content',{}\\).get\\('parts',[]\\); print\\('Parts count:', len\\(p\\)\\); print\\('Part types:', [list\\(x.keys\\(\\)\\) for x in p]\\)\")",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\)\\); const c=d.candidates?.[0]; const parts=c?.content?.parts||[]; console.log\\('error?', d.error?.message\\); console.log\\('parts count:', parts.length\\); parts.forEach\\(\\(p,i\\)=>console.log\\('part',i,'keys:', Object.keys\\(p\\)\\)\\);\")",
+      "Bash(curl -s -X POST 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=AIzaSyDdaBylAfq9-UayH46OKEiu0sOkY7cxfAM' -H 'Content-Type: application/json' -d '{\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"Generate a simple room image with a sofa\"}]}],\"generationConfig\":{\"responseModalities\":[\"TEXT\",\"IMAGE\"]}}' -o /tmp/gemini_test.json)",
+      "Bash(node -e ' *)",
+      "Bash(curl -s -X POST 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=AIzaSyDdaBylAfq9-UayH46OKEiu0sOkY7cxfAM' -H 'Content-Type: application/json' -d '{\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"Generate a simple room image with a sofa\"}]}],\"generationConfig\":{\"responseModalities\":[\"TEXT\",\"IMAGE\"]}}' -o C:/Users/victo/gemini_test.json)",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\('C:/Users/victo/gemini_test.json','utf8'\\)\\); console.log\\('error:',d.error?.message||'none'\\); const parts=d.candidates?.[0]?.content?.parts||[]; console.log\\('parts:',parts.length\\); parts.forEach\\(\\(p,i\\)=>console.log\\('part',i,Object.keys\\(p\\)\\)\\);\")",
+      "Bash(curl -s -I \"https://picsum.photos/seed/sofa1/400/300\")",
+      "Bash(curl *)",
+      "Bash(identify /c/Users/victo/Exam/supplier-portal/public/logo.png)",
+      "Bash(xargs grep *)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
