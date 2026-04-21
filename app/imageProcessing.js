@@ -204,7 +204,7 @@ function compositeProduct(ctx, roomW, roomH, productImg, floorY = 0.82, centerX 
 }
 
 // ── Gemini AI-rumsstaging ─────────────────────────────────────────────────────
-async function stageWithGemini(productImageInput) {
+async function stageWithGeminiStreaming(productImageInput, onChunk) {
   let product, room
   try {
     ;[product, room] = await Promise.all([
@@ -219,7 +219,7 @@ async function stageWithGemini(productImageInput) {
   if (!apiKey) throw new Error('Gemini API-nyckel saknas — ange den i staging-panelen')
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?key=${apiKey}&alt=sse`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -242,11 +242,45 @@ async function stageWithGemini(productImageInput) {
     throw new Error(err?.error?.message ?? `Gemini-anrop misslyckades (HTTP ${res.status})`)
   }
 
-  const data = await res.json()
-  const parts = data?.candidates?.[0]?.content?.parts ?? []
-  const imgPart = parts.find(p => p.inlineData?.mimeType?.startsWith('image/'))
-  if (!imgPart?.inlineData) throw new Error('Gemini returnerade ingen bild')
-  return `data:${imgPart.inlineData.mimeType};base64,${imgPart.inlineData.data}`
+  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader()
+  let remainder = ''
+  let imageDataUrl = null
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      const lines = (remainder + value).split('\n')
+      remainder = lines.pop() ?? ''
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        const raw = line.slice(6).trim()
+        if (raw === '[DONE]') break
+        try {
+          const chunk = JSON.parse(raw)
+          const parts = chunk?.candidates?.[0]?.content?.parts ?? []
+          for (const part of parts) {
+            if (typeof part.text === 'string' && part.text) {
+              onChunk?.({ type: 'text', text: part.text })
+            }
+            if (part.inlineData?.mimeType?.startsWith('image/')) {
+              imageDataUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`
+            }
+          }
+        } catch {
+          // Malformed SSE chunk — skip
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock()
+  }
+
+  if (!imageDataUrl) throw new Error('Gemini returnerade ingen bild')
+  onChunk?.({ type: 'done' })
+  return imageDataUrl
 }
 
 // ── Komprimera bild för localStorage (max 900px, 0.75 kvalitet) ──────────────
@@ -262,9 +296,9 @@ export async function compressForStorage(dataUrl, maxSize = 900, quality = 0.75)
 }
 
 // ── Exporterad: stageInRoom ───────────────────────────────────────────────────
-export async function stageInRoom(productImage, roomType, style) {
+export async function stageInRoom(productImage, roomType, style, onChunk) {
   if (roomType === 'jakobsdal') {
-    return stageWithGemini(productImage)
+    return stageWithGeminiStreaming(productImage, onChunk)
   }
 
   // Canvas-compositing för övriga rum

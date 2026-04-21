@@ -193,6 +193,11 @@ export function DetailPage() {
   const [roomStyle, setRoomStyle] = React.useState('modern skandinavisk')
   const [isStaging, setIsStaging] = React.useState(false)
   const [stagedImage, setStagedImage] = React.useState(null)
+  const [thinkingTokens, setThinkingTokens] = React.useState([])
+  const [thinkingElapsed, setThinkingElapsed] = React.useState(0)
+  const [thinkingOpen, setThinkingOpen] = React.useState(false)
+  const elapsedTimerRef = React.useRef(null)
+  React.useEffect(() => () => clearInterval(elapsedTimerRef.current), [])
   // Bildvy: 'original' | 'staged'
   const [imageView, setImageView] = React.useState('original')
 
@@ -260,8 +265,29 @@ export function DetailPage() {
   }
 
   const handleStageInRoom = async () => {
+    setThinkingTokens([])
+    setThinkingElapsed(0)
+    setThinkingOpen(true)
     setIsStaging(true)
     setStagedImage(null)
+
+    const startedAt = Date.now()
+    elapsedTimerRef.current = setInterval(() => {
+      setThinkingElapsed(Math.floor((Date.now() - startedAt) / 1000))
+    }, 1000)
+
+    const steps = [
+      { delay: 0,    text: 'Analyzing product shape, materials and color palette…' },
+      { delay: 3000, text: 'Reading room geometry, light sources and depth…' },
+      { delay: 7000, text: 'Calculating placement, scale and perspective…' },
+      { delay: 12000, text: 'Compositing product into the scene…' },
+      { delay: 17000, text: 'Applying shadows, reflections and color grading…' },
+      { delay: 22000, text: 'Finalizing and rendering high-resolution output…' },
+    ]
+    const stepTimers = steps.map(({ delay, text }) =>
+      setTimeout(() => setThinkingTokens(prev => [...prev, text + '\n']), delay)
+    )
+
     try {
       const result = await stageInRoom(p.image, roomType, roomStyle)
       setStagedImage(result)
@@ -272,6 +298,8 @@ export function DetailPage() {
     } catch (err) {
       notify(err.message || 'Room staging failed', 'error')
     } finally {
+      stepTimers.forEach(clearTimeout)
+      clearInterval(elapsedTimerRef.current)
       setIsStaging(false)
     }
   }
@@ -445,10 +473,14 @@ export function DetailPage() {
             <Btn variant="primary" size="sm" full onClick={handleStageInRoom} disabled={isStaging}>
               {isStaging ? 'Gemini is generating…' : 'Generate room image'}
             </Btn>
-            {isStaging && (
-              <div style={{ marginTop: 12, fontSize: 12.5, color: 'var(--ink-3)', textAlign: 'center' }}>
-                Jakobsdal: AI generation takes 10–30 seconds…
-              </div>
+            {(isStaging || thinkingElapsed > 0) && (
+              <ThinkingPanel
+                tokens={thinkingTokens}
+                elapsed={thinkingElapsed}
+                isActive={isStaging}
+                isOpen={thinkingOpen}
+                onToggle={() => setThinkingOpen(v => !v)}
+              />
             )}
             {stagedImage && (
               <div style={{ marginTop: 16 }}>
@@ -559,5 +591,40 @@ export function DetailPage() {
         </div>
       </div>
     </AppShell>
+  )
+}
+
+function ThinkingPanel({ tokens, elapsed, isActive, isOpen, onToggle }) {
+  const scrollRef = React.useRef(null)
+  React.useEffect(() => {
+    if (scrollRef.current)
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+  }, [tokens])
+
+  const fullText = tokens.join('')
+  return (
+    <div style={{ marginTop: 12, border: '1px solid var(--rule)', borderRadius: 6, overflow: 'hidden', fontSize: 12, background: 'var(--paper-2)' }}>
+      <style>{`@keyframes thinking-pulse{0%,100%{opacity:1}50%{opacity:.35}}`}</style>
+      <button onClick={onToggle} style={{ all: 'unset', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 12px', boxSizing: 'border-box' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: isActive ? 'var(--ochre)' : 'var(--sage)', animation: isActive ? 'thinking-pulse 1.4s ease-in-out infinite' : 'none' }} />
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.08em', color: 'var(--ink-3)', textTransform: 'uppercase' }}>
+            {isActive ? 'AI thinking' : 'AI thinking — done'}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--ink-3)' }}>{elapsed}s</span>
+          <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>{isOpen ? '▲' : '▼'}</span>
+        </div>
+      </button>
+      {isOpen && (
+        <div ref={scrollRef} style={{ maxHeight: 140, overflowY: 'auto', padding: '8px 12px 10px', borderTop: '1px solid var(--rule)', fontFamily: 'var(--mono)', fontSize: 11, lineHeight: 1.6, color: 'var(--ink-2)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          {fullText
+            ? <>{fullText}{isActive && <span style={{ display: 'inline-block', marginLeft: 2, opacity: 0.5 }}>▌</span>}</>
+            : <span style={{ color: 'var(--ink-3)', fontStyle: 'italic' }}>{isActive ? 'Waiting for model response…' : 'No thought text returned.'}</span>
+          }
+        </div>
+      )}
+    </div>
   )
 }
